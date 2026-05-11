@@ -3,203 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>足球量化赛前分析专业版 V5.0</title>
+    <title>机构级足球赛前全数据动态权重风险控制分析系统 V5.1</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <header class="hero">
-        <div>
-            <p class="eyebrow">Football Quant Intelligence</p>
-            <h1>足球量化赛前分析专业版 V5.0</h1>
-            <p class="hero-copy">整合欧赔概率、盘口变化、凯利指数、冷门指数与资金管理建议，辅助赛前决策。</p>
+<body class="compact font-small">
+    <nav class="top-nav" aria-label="主导航">
+        <a href="#overview">总览</a>
+        <a href="#matches">今日比赛</a>
+        <a href="#deep-analysis">单场深度分析</a>
+        <a href="#combo">3串4容错模型</a>
+        <a href="#bankroll">资金管理</a>
+        <a href="#risk-rules">风险控制规则</a>
+        <a href="#import">数据导入</a>
+    </nav>
+
+    <header class="terminal-header" id="overview">
+        <div class="title-block">
+            <p class="eyebrow">足球量化智能分析系统 · V5.1</p>
+            <h1>机构级足球赛前全数据动态权重风险控制分析系统</h1>
+            <p class="header-copy">全中文量化终端，聚合概率矩阵、盘口赔率、凯利指数、冷门预警、资金纪律与3串4容错结构；所有推荐仅作赛前分析参考。</p>
         </div>
-        <div class="hero-badge">
-            <span>今日比赛</span>
-            <strong>{{ summary.total_matches }}</strong>
+        <div class="toolbar" aria-label="显示设置">
+            <button class="tool-button active" data-density="compact">紧凑模式</button>
+            <button class="tool-button" data-density="standard">标准模式</button>
+            <div class="font-tools" aria-label="字体大小调节">
+                <button class="tool-button active" data-font="small">小</button>
+                <button class="tool-button" data-font="medium">中</button>
+                <button class="tool-button" data-font="large">大</button>
+            </div>
         </div>
     </header>
 
-    <main class="layout">
-        <aside class="sidebar panel">
-            <h2>筛选联赛</h2>
-            <label for="leagueFilter">选择联赛</label>
+    {% if is_demo %}
+    <section class="demo-alert" role="status">当前为演示数据，请导入 matches.csv 获取真实赛程。</section>
+    {% endif %}
+
+    <main class="terminal-layout">
+        <aside class="control-panel panel">
+            <h2>筛选与排序</h2>
+            <label for="leagueFilter">联赛</label>
             <select id="leagueFilter">
                 <option value="all">全部联赛</option>
-                {% for league in leagues %}
-                <option value="{{ league }}">{{ league }}</option>
-                {% endfor %}
+                {% for league in leagues %}<option value="{{ league }}">{{ league }}</option>{% endfor %}
             </select>
 
-            <div class="side-note">
-                <strong>分析说明</strong>
-                <p>概率由赔率隐含概率归一化生成；若 CSV 已提供概率字段，则优先保留原有模型输出。</p>
+            <label for="quickFilter">模型筛选</label>
+            <select id="quickFilter">
+                <option value="all">全部比赛</option>
+                <option value="risk-a">只看A级</option>
+                <option value="risk-b">只看B级</option>
+                <option value="risk-c">只看C级</option>
+                <option value="combo">只看适合3串4</option>
+                <option value="upset">只看冷门预警</option>
+            </select>
+
+            <label for="sortMode">排序</label>
+            <select id="sortMode">
+                <option value="time">按比赛时间排序</option>
+                <option value="risk">按风险从低到高</option>
+                <option value="value">按价值从高到低</option>
+            </select>
+
+            <div class="mini-note">
+                <strong>数据原则</strong>
+                <p>数据不足或触发C级高风险时显示“本场不建议买”。不宣传稳赚，不使用稳赢表述。</p>
             </div>
         </aside>
 
-        <section class="main-content">
-            <section class="kpi-grid" aria-label="今日总览">
-                <article class="kpi-card">
-                    <span>今日比赛列表</span>
-                    <strong id="visibleCount">{{ summary.total_matches }}</strong>
-                    <small>当前筛选场次</small>
-                </article>
-                <article class="kpi-card">
-                    <span>低风险场次</span>
-                    <strong>{{ summary.low_risk }}</strong>
-                    <small>适合做串关核心</small>
-                </article>
-                <article class="kpi-card">
-                    <span>平均冷门指数</span>
-                    <strong>{{ summary.avg_upset }}</strong>
-                    <small>越高越需防冷</small>
-                </article>
-                <article class="kpi-card">
-                    <span>强势方向</span>
-                    <strong>{{ summary.top_pick }}</strong>
-                    <small>最高置信赛果</small>
-                </article>
+        <section class="content-grid">
+            <section class="kpi-grid" aria-label="核心指标">
+                <article class="kpi-card"><span>比赛总数</span><strong id="visibleCount">{{ summary.total_matches }}</strong><small>当前可见场次</small></article>
+                <article class="kpi-card"><span>A级稳胆</span><strong>{{ summary.a_risk }}</strong><small>只能做稳胆</small></article>
+                <article class="kpi-card"><span>B级价值盘</span><strong>{{ summary.b_risk }}</strong><small>3串4价值位</small></article>
+                <article class="kpi-card"><span>平均冷门指数</span><strong>{{ summary.avg_upset }}</strong><small>越高越需防冷</small></article>
+                <article class="kpi-card"><span>适合3串4</span><strong>{{ summary.combo_count }}</strong><small>自动筛选</small></article>
             </section>
 
             <section class="panel chart-panel">
                 <div class="section-title">
-                    <div>
-                        <p class="eyebrow">Probability Matrix</p>
-                        <h2>胜平负概率分布</h2>
-                    </div>
-                    <span class="status-pill">赛前模型</span>
+                    <div><p class="eyebrow">概率矩阵</p><h2>胜平负概率分布</h2></div>
+                    <span class="status-pill">动态权重赛前模型</span>
                 </div>
-                <canvas id="probChart" height="130"></canvas>
+                <canvas id="probChart" height="108"></canvas>
             </section>
 
-            <section class="panel table-panel">
+            <section class="panel table-panel" id="matches">
                 <div class="section-title">
-                    <div>
-                        <p class="eyebrow">Pre-match Board</p>
-                        <h2>今日比赛列表与专业指标</h2>
-                    </div>
-                    <span class="status-pill accent">3串1 / 3串4</span>
+                    <div><p class="eyebrow">比赛分析看板</p><h2>今日比赛主表</h2></div>
+                    <span class="status-pill accent">主表 + 展开详情</span>
                 </div>
-
-                <div class="table-scroll">
+                <div class="table-wrap">
                     <table id="matchesTable">
                         <thead>
                             <tr>
-                                <th>日期</th>
-                                <th>联赛</th>
-                                <th>对阵</th>
-                                <th>胜平负概率</th>
-                                <th>比分预测</th>
-                                <th>半全场</th>
-                                <th>冷门指数</th>
-                                <th>风险等级</th>
-                                <th>盘口变化</th>
-                                <th>凯利指数</th>
-                                <th>资金管理建议</th>
-                                <th>3串1</th>
-                                <th>3串4容错</th>
+                                <th>时间</th><th>联赛</th><th>对阵</th><th>胜平负概率</th><th>风险等级</th><th>推荐方向</th><th>比分</th><th>半全场</th><th>进3串4</th><th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
                             {% for row in data %}
-                            <tr data-league="{{ row['league'] }}" data-risk="{{ row['risk_level'] }}">
-                                <td>{{ row['date'] }}</td>
+                            <tr class="match-row" data-index="{{ loop.index0 }}" data-league="{{ row['league'] }}" data-risk="{{ row['risk_code'] }}" data-combo="{{ '1' if row['combo_eligible'] else '0' }}" data-upset="{{ row['upset_warning'] }}" data-value="{{ row['value_score'] }}" data-time="{{ row['match_time'] }}">
+                                <td><strong>{{ row['date'] }}</strong><span class="subtext">{{ row['time'] }}</span></td>
                                 <td>{{ row['league'] }}</td>
-                                <td class="teams">
-                                    <strong>{{ row['home_team'] }}</strong>
-                                    <span>vs</span>
-                                    <strong>{{ row['away_team'] }}</strong>
-                                </td>
-                                <td class="prob-cell">
-                                    <span class="win">胜 {{ row['prob_H_text'] }}</span>
-                                    <span class="draw">平 {{ row['prob_D_text'] }}</span>
-                                    <span class="lose">负 {{ row['prob_A_text'] }}</span>
-                                </td>
-                                <td><strong>{{ row['score_prediction'] }}</strong></td>
+                                <td class="teams"><strong>{{ row['home_team'] }}</strong><span>vs</span><strong>{{ row['away_team'] }}</strong></td>
+                                <td class="prob-cell"><span class="win">胜 {{ row['prob_H_text'] }}</span><span class="draw">平 {{ row['prob_D_text'] }}</span><span class="lose">负 {{ row['prob_A_text'] }}</span></td>
+                                <td><span class="risk-badge {{ row['risk_class'] }}">{{ row['risk_code'] }}级</span></td>
+                                <td><strong>{{ row['prediction'] }}</strong><span class="subtext">{{ row['bankroll_advice'] }}</span></td>
+                                <td>{{ row['score_prediction'] }}</td>
                                 <td>{{ row['half_full'] }}</td>
-                                <td>{{ row['upset_index'] }}</td>
-                                <td><span class="risk {{ row['risk_level'] }}">{{ row['risk_level'] }}</span></td>
-                                <td>{{ row['handicap_change'] }}</td>
-                                <td class="kelly">
-                                    <span>H {{ row['kelly_H_text'] }}</span>
-                                    <span>D {{ row['kelly_D_text'] }}</span>
-                                    <span>A {{ row['kelly_A_text'] }}</span>
+                                <td><span class="combo-badge {{ 'on' if row['combo_eligible'] else 'off' }}">{{ row['combo_eligible_text'] }}</span></td>
+                                <td><button class="detail-button" type="button" data-target="detail-{{ loop.index0 }}">深度分析详情</button></td>
+                            </tr>
+                            <tr class="detail-row" id="detail-{{ loop.index0 }}">
+                                <td colspan="10">
+                                    <article class="detail-panel" id="deep-analysis">
+                                        <div class="report-card">
+                                            <h3>固定格式分析输出</h3>
+                                            <div class="report-grid">
+                                                {% for key, value in row['fixed_report'].items() %}
+                                                <div><span>{{ key }}</span><strong>{{ value }}</strong></div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <div class="detail-metrics">
+                                            <span>冷门指数：{{ row['upset_index'] }}</span><span>盘口变化：{{ row['handicap_change'] }}</span><span>凯利：主{{ row['kelly_H_text'] }} / 平{{ row['kelly_D_text'] }} / 客{{ row['kelly_A_text'] }}</span><span>大小球：{{ row['goals_pick'] }}（{{ row['over25_text'] }}）</span><span>双方进球：{{ row['btts_text'] }}</span>
+                                        </div>
+                                        <div class="analysis-grid">
+                                            {% for section, items in row['analysis_sections'].items() %}
+                                            <section class="analysis-card">
+                                                <h4>{{ section }}</h4>
+                                                <ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>
+                                            </section>
+                                            {% endfor %}
+                                        </div>
+                                    </article>
                                 </td>
-                                <td>{{ row['bankroll_advice'] }}</td>
-                                <td><span class="pick">{{ row['combo_3x1'] }}</span></td>
-                                <td><span class="pick soft">{{ row['combo_3x4'] }}</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </section>
+
+            <section class="two-column">
+                <section class="panel rules-panel" id="risk-rules">
+                    <div class="section-title"><div><p class="eyebrow">风险控制规则</p><h2>风险等级说明</h2></div></div>
+                    <div class="risk-rules">
+                        <article><span class="risk-badge risk-a">A级</span><h3>稳胆</h3><p>条件：数据支持明显、战意明确、阵容完整、盘口合理、热度不过热。</p><strong>用途：只能做稳胆。</strong></article>
+                        <article><span class="risk-badge risk-b">B级</span><h3>价值盘</h3><p>条件：有一定风险、赔率有价值、数据支持合理。</p><strong>用途：适合做3串4价值位。</strong></article>
+                        <article><span class="risk-badge risk-c">C级</span><h3>高风险</h3><p>条件：爆冷概率高、盘口异常、战意不明、临场变化大。</p><strong>用途：只能小注娱乐，不能做主推稳健单。</strong></article>
+                    </div>
+                </section>
+
+                <section class="panel bankroll-panel" id="bankroll">
+                    <div class="section-title"><div><p class="eyebrow">资金管理</p><h2>仓位纪律卡片</h2></div></div>
+                    <div class="bankroll-grid">
+                        <div><span>稳健主推</span><strong>本金 1%~2%</strong></div>
+                        <div><span>中高倍</span><strong>本金 0.5%~1%</strong></div>
+                        <div><span>高倍娱乐</span><strong>本金 0.2%~0.5%</strong></div>
+                        <div class="ban"><span>禁止</span><strong>梭哈 / 追损 / 倍投 / 情绪下注</strong></div>
+                        <div class="stop"><span>连续黑2组</span><strong>当天停止。</strong></div>
+                    </div>
+                </section>
+            </section>
+
+            <section class="panel combo-panel" id="combo">
+                <div class="section-title"><div><p class="eyebrow">3串4容错模型</p><h2>自动筛选结构</h2></div><span class="status-pill">A级稳胆 + A级稳胆 + B级价值盘</span></div>
+                <div class="combo-rules"><span>主推优先采用3串4</span><span>禁止3场全冷</span><span>禁止3场全低赔</span><span>禁止为了凑串关硬加比赛</span></div>
+                {% if combo_model.qualified %}
+                <div class="combo-selected">
+                    {% for match in combo_model.matches %}<article><strong>{{ match.home_team }} vs {{ match.away_team }}</strong><span>{{ match.risk_code }}级 · {{ match.combo_3x4 }} · 价值{{ match.value_score }}</span></article>{% endfor %}
+                </div>
+                <div class="combo-lines"><h3>3个2串1</h3><ol>{% for item in combo_model.doubles %}<li>{{ item }}</li>{% endfor %}</ol><h3>1个3串1</h3><p>{{ combo_model.triple }}</p></div>
+                <p class="combo-message">{{ combo_model.message }}</p>
+                {% else %}
+                <p class="combo-message warning">{{ combo_model.message }}</p>
+                {% endif %}
+            </section>
+
+            <section class="panel import-panel" id="import">
+                <div class="section-title"><div><p class="eyebrow">数据导入</p><h2>matches.csv 字段说明</h2></div></div>
+                <p>将 <strong>matches.csv</strong> 放到 <strong>football_predictor/</strong> 目录即可读取真实赛程；字段不完整时会兼容基础字段并自动补默认值，不会报错。</p>
+                <div class="field-list">{% for field in csv_fields %}<code>{{ field }}</code>{% endfor %}</div>
+                <p class="subtext">演示数据用于页面结构与模型流程展示；真实数据导入后，以CSV提供的赛程、概率、盘口、伤停、战意与赔率说明为优先输入。</p>
+            </section>
         </section>
     </main>
 
-<script>
-const tableRows = Array.from(document.querySelectorAll('#tableBody tr'));
-const visibleCount = document.getElementById('visibleCount');
-const ctx = document.getElementById('probChart').getContext('2d');
-
-function parseProbability(text) {
-    const match = text.match(/([0-9.]+)%/);
-    return match ? Number(match[1]) : 0;
-}
-
-function drawChart(filteredRows) {
-    const labels = [];
-    const probH = [];
-    const probD = [];
-    const probA = [];
-
-    filteredRows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        labels.push(cells[2].innerText.replace(/\s+/g, ' '));
-        probH.push(parseProbability(cells[3].querySelector('.win').innerText));
-        probD.push(parseProbability(cells[3].querySelector('.draw').innerText));
-        probA.push(parseProbability(cells[3].querySelector('.lose').innerText));
-    });
-
-    if (window.myChart) window.myChart.destroy();
-
-    window.myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                { label: '主胜概率', data: probH, backgroundColor: 'rgba(45, 212, 191, 0.82)', borderRadius: 8 },
-                { label: '平局概率', data: probD, backgroundColor: 'rgba(250, 204, 21, 0.82)', borderRadius: 8 },
-                { label: '客胜概率', data: probA, backgroundColor: 'rgba(248, 113, 113, 0.82)', borderRadius: 8 }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { labels: { color: '#dbeafe' } } },
-            scales: {
-                x: { ticks: { color: '#b6c3d7' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } },
-                y: { beginAtZero: true, max: 100, ticks: { color: '#b6c3d7' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } }
-            }
-        }
-    });
-}
-
-function applyFilter() {
-    const selectedLeague = document.getElementById('leagueFilter').value;
-    const filteredRows = [];
-
-    tableRows.forEach(row => {
-        const isVisible = selectedLeague === 'all' || row.dataset.league === selectedLeague;
-        row.style.display = isVisible ? '' : 'none';
-        if (isVisible) filteredRows.push(row);
-    });
-
-    visibleCount.innerText = filteredRows.length;
-    drawChart(filteredRows);
-}
-
-document.getElementById('leagueFilter').addEventListener('change', applyFilter);
-applyFilter();
-</script>
+    <footer class="risk-footer">足球比赛存在不确定性，本系统仅用于数据分析与风险控制参考，不保证结果，不建议重注、追损或倍投。</footer>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
