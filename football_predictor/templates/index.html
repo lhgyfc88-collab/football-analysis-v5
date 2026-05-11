@@ -35,8 +35,12 @@
         </div>
     </header>
 
-    {% if is_demo %}
-    <section class="demo-alert" role="status">当前为演示数据，请导入 matches.csv 获取真实赛程。</section>
+    {% if data_source == "csv" %}
+    <section class="demo-alert" role="status">当前使用 matches.csv 本地数据。</section>
+    {% elif data_source == "api" %}
+    <section class="demo-alert" role="status">当前使用 API 自动抓取赛程。</section>
+    {% else %}
+    <section class="demo-alert" role="status">当前为演示数据，请导入 matches.csv 或配置 API_KEY 获取真实赛程。</section>
     {% endif %}
 
     <main class="terminal-layout">
@@ -183,9 +187,9 @@
 
             <section class="panel import-panel" id="import">
                 <div class="section-title"><div><p class="eyebrow">数据导入</p><h2>matches.csv 字段说明</h2></div></div>
-                <p>将 <strong>matches.csv</strong> 放到 <strong>football_predictor/</strong> 目录即可读取真实赛程；字段不完整时会兼容基础字段并自动补默认值，不会报错。</p>
+                <p>将 <strong>matches.csv</strong> 放到 <strong>football_predictor/</strong> 目录即可优先读取本地真实赛程；如未导入CSV，系统会尝试读取 <strong>config.json</strong> 中的 <strong>API_KEY</strong> 并自动抓取今天和明天的赛程。</p>
                 <div class="field-list">{% for field in csv_fields %}<code>{{ field }}</code>{% endfor %}</div>
-                <p class="subtext">演示数据用于页面结构与模型流程展示；真实数据导入后，以CSV提供的赛程、概率、盘口、伤停、战意与赔率说明为优先输入。</p>
+                <p class="subtext">CSV可补充概率、盘口、凯利、伤停、战意与赔率说明；football-data.org API仅提供赛程与基础比赛信息，缺少盘口/伤停/赔率时会显示“数据不足”“本场不建议买”，并提示补充数据后再分析。</p>
             </section>
         </section>
     </main>
