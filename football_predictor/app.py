@@ -32,7 +32,7 @@ def build_summary(df):
 
 @app.route("/")
 def index():
-    df, is_demo = load_matches()
+    df, is_demo, data_source = load_matches()
     leagues = sorted(df["league"].dropna().unique()) if not df.empty else []
     summary = build_summary(df)
     combo_model = build_combo_model(df)
@@ -42,6 +42,7 @@ def index():
         leagues=leagues,
         summary=summary,
         is_demo=is_demo,
+        data_source=data_source,
         risk_profiles=RISK_PROFILES,
         combo_model=combo_model,
         csv_fields=CSV_FIELDS,
