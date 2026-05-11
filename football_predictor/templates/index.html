@@ -2,63 +2,150 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>足球量化预测网站 V5.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>足球量化赛前分析专业版 V5.0</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>足球量化预测网站 V5.0</h1>
+    <header class="hero">
+        <div>
+            <p class="eyebrow">Football Quant Intelligence</p>
+            <h1>足球量化赛前分析专业版 V5.0</h1>
+            <p class="hero-copy">整合欧赔概率、盘口变化、凯利指数、冷门指数与资金管理建议，辅助赛前决策。</p>
+        </div>
+        <div class="hero-badge">
+            <span>今日比赛</span>
+            <strong>{{ summary.total_matches }}</strong>
+        </div>
+    </header>
 
-    <div class="container">
-        <div class="sidebar">
-            <h3>筛选联赛</h3>
+    <main class="layout">
+        <aside class="sidebar panel">
+            <h2>筛选联赛</h2>
+            <label for="leagueFilter">选择联赛</label>
             <select id="leagueFilter">
                 <option value="all">全部联赛</option>
                 {% for league in leagues %}
                 <option value="{{ league }}">{{ league }}</option>
                 {% endfor %}
             </select>
-        </div>
 
-        <div class="main">
-            <table id="matchesTable">
-                <thead>
-                    <tr>
-                        <th>日期</th>
-                        <th>联盟</th>
-                        <th>主队</th>
-                        <th>客队</th>
-                        <th>胜概率</th>
-                        <th>平概率</th>
-                        <th>负概率</th>
-                        <th>目标差</th>
-                        <th>主场优势</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    {% for row in data %}
-                    <tr>
-                        <td>{{ row['日期'] }}</td>
-                        <td>{{ row['联盟'] }}</td>
-                        <td>{{ row['home_team'] }}</td>
-                        <td>{{ row['客场_球队'] }}</td>
-                        <td>{{ row['prob_H'] }}</td>
-                        <td>{{ row['prob_D'] }}</td>
-                        <td>{{ row['prob_A'] }}</td>
-                        <td>{{ row['target_diff'] }}</td>
-                        <td>{{ row['home_adv'] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="side-note">
+                <strong>分析说明</strong>
+                <p>概率由赔率隐含概率归一化生成；若 CSV 已提供概率字段，则优先保留原有模型输出。</p>
+            </div>
+        </aside>
 
-            <canvas id="probChart" width="600" height="250"></canvas>
-        </div>
-    </div>
+        <section class="main-content">
+            <section class="kpi-grid" aria-label="今日总览">
+                <article class="kpi-card">
+                    <span>今日比赛列表</span>
+                    <strong id="visibleCount">{{ summary.total_matches }}</strong>
+                    <small>当前筛选场次</small>
+                </article>
+                <article class="kpi-card">
+                    <span>低风险场次</span>
+                    <strong>{{ summary.low_risk }}</strong>
+                    <small>适合做串关核心</small>
+                </article>
+                <article class="kpi-card">
+                    <span>平均冷门指数</span>
+                    <strong>{{ summary.avg_upset }}</strong>
+                    <small>越高越需防冷</small>
+                </article>
+                <article class="kpi-card">
+                    <span>强势方向</span>
+                    <strong>{{ summary.top_pick }}</strong>
+                    <small>最高置信赛果</small>
+                </article>
+            </section>
+
+            <section class="panel chart-panel">
+                <div class="section-title">
+                    <div>
+                        <p class="eyebrow">Probability Matrix</p>
+                        <h2>胜平负概率分布</h2>
+                    </div>
+                    <span class="status-pill">赛前模型</span>
+                </div>
+                <canvas id="probChart" height="130"></canvas>
+            </section>
+
+            <section class="panel table-panel">
+                <div class="section-title">
+                    <div>
+                        <p class="eyebrow">Pre-match Board</p>
+                        <h2>今日比赛列表与专业指标</h2>
+                    </div>
+                    <span class="status-pill accent">3串1 / 3串4</span>
+                </div>
+
+                <div class="table-scroll">
+                    <table id="matchesTable">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>联赛</th>
+                                <th>对阵</th>
+                                <th>胜平负概率</th>
+                                <th>比分预测</th>
+                                <th>半全场</th>
+                                <th>冷门指数</th>
+                                <th>风险等级</th>
+                                <th>盘口变化</th>
+                                <th>凯利指数</th>
+                                <th>资金管理建议</th>
+                                <th>3串1</th>
+                                <th>3串4容错</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            {% for row in data %}
+                            <tr data-league="{{ row['league'] }}" data-risk="{{ row['risk_level'] }}">
+                                <td>{{ row['date'] }}</td>
+                                <td>{{ row['league'] }}</td>
+                                <td class="teams">
+                                    <strong>{{ row['home_team'] }}</strong>
+                                    <span>vs</span>
+                                    <strong>{{ row['away_team'] }}</strong>
+                                </td>
+                                <td class="prob-cell">
+                                    <span class="win">胜 {{ row['prob_H_text'] }}</span>
+                                    <span class="draw">平 {{ row['prob_D_text'] }}</span>
+                                    <span class="lose">负 {{ row['prob_A_text'] }}</span>
+                                </td>
+                                <td><strong>{{ row['score_prediction'] }}</strong></td>
+                                <td>{{ row['half_full'] }}</td>
+                                <td>{{ row['upset_index'] }}</td>
+                                <td><span class="risk {{ row['risk_level'] }}">{{ row['risk_level'] }}</span></td>
+                                <td>{{ row['handicap_change'] }}</td>
+                                <td class="kelly">
+                                    <span>H {{ row['kelly_H_text'] }}</span>
+                                    <span>D {{ row['kelly_D_text'] }}</span>
+                                    <span>A {{ row['kelly_A_text'] }}</span>
+                                </td>
+                                <td>{{ row['bankroll_advice'] }}</td>
+                                <td><span class="pick">{{ row['combo_3x1'] }}</span></td>
+                                <td><span class="pick soft">{{ row['combo_3x4'] }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    </main>
 
 <script>
-const tableRows = document.querySelectorAll('#tableBody tr');
+const tableRows = Array.from(document.querySelectorAll('#tableBody tr'));
+const visibleCount = document.getElementById('visibleCount');
 const ctx = document.getElementById('probChart').getContext('2d');
+
+function parseProbability(text) {
+    const match = text.match(/([0-9.]+)%/);
+    return match ? Number(match[1]) : 0;
+}
 
 function drawChart(filteredRows) {
     const labels = [];
@@ -66,49 +153,53 @@ function drawChart(filteredRows) {
     const probD = [];
     const probA = [];
 
-    filteredRows.forEach(r => {
-        const cells = r.querySelectorAll('td');
-        labels.push(cells[2].innerText + ' vs ' + cells[3].innerText);
-        probH.push(parseFloat(cells[4].innerText));
-        probD.push(parseFloat(cells[5].innerText));
-        probA.push(parseFloat(cells[6].innerText));
+    filteredRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        labels.push(cells[2].innerText.replace(/\s+/g, ' '));
+        probH.push(parseProbability(cells[3].querySelector('.win').innerText));
+        probD.push(parseProbability(cells[3].querySelector('.draw').innerText));
+        probA.push(parseProbability(cells[3].querySelector('.lose').innerText));
     });
 
-    if(window.myChart) window.myChart.destroy();
+    if (window.myChart) window.myChart.destroy();
 
     window.myChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels,
             datasets: [
-                {label: '主胜概率', data: probH, backgroundColor: 'rgba(75, 192, 192, 0.7)'},
-                {label: '平局概率', data: probD, backgroundColor: 'rgba(255, 206, 86, 0.7)'},
-                {label: '客胜概率', data: probA, backgroundColor: 'rgba(255, 99, 132, 0.7)'}
+                { label: '主胜概率', data: probH, backgroundColor: 'rgba(45, 212, 191, 0.82)', borderRadius: 8 },
+                { label: '平局概率', data: probD, backgroundColor: 'rgba(250, 204, 21, 0.82)', borderRadius: 8 },
+                { label: '客胜概率', data: probA, backgroundColor: 'rgba(248, 113, 113, 0.82)', borderRadius: 8 }
             ]
         },
         options: {
             responsive: true,
-            scales: {y: {beginAtZero: true}}
+            plugins: { legend: { labels: { color: '#dbeafe' } } },
+            scales: {
+                x: { ticks: { color: '#b6c3d7' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } },
+                y: { beginAtZero: true, max: 100, ticks: { color: '#b6c3d7' }, grid: { color: 'rgba(148, 163, 184, 0.12)' } }
+            }
         }
     });
 }
 
-// 初始图表
-drawChart(Array.from(tableRows));
+function applyFilter() {
+    const selectedLeague = document.getElementById('leagueFilter').value;
+    const filteredRows = [];
 
-// 筛选
-document.getElementById('leagueFilter').addEventListener('change', function() {
-    const val = this.value;
-    const filtered = [];
-    tableRows.forEach(r => {
-        r.style.display = 'none';
-        if(val === 'all' || r.cells[1].innerText === val) {
-            r.style.display = '';
-            filtered.push(r);
-        }
+    tableRows.forEach(row => {
+        const isVisible = selectedLeague === 'all' || row.dataset.league === selectedLeague;
+        row.style.display = isVisible ? '' : 'none';
+        if (isVisible) filteredRows.push(row);
     });
-    drawChart(filtered);
-});
+
+    visibleCount.innerText = filteredRows.length;
+    drawChart(filteredRows);
+}
+
+document.getElementById('leagueFilter').addEventListener('change', applyFilter);
+applyFilter();
 </script>
 </body>
 </html>
