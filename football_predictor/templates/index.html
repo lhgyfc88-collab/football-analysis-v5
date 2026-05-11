@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>足球量化预测网站 V5.0</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>足球量化预测网站 V5.0</h1>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>筛选联赛</h3>
+            <select id="leagueFilter">
+                <option value="all">全部联赛</option>
+                {% for league in leagues %}
+                <option value="{{ league }}">{{ league }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="main">
+            <table id="matchesTable">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>联盟</th>
+                        <th>主队</th>
+                        <th>客队</th>
+                        <th>胜概率</th>
+                        <th>平概率</th>
+                        <th>负概率</th>
+                        <th>目标差</th>
+                        <th>主场优势</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for row in data %}
+                    <tr>
+                        <td>{{ row['日期'] }}</td>
+                        <td>{{ row['联盟'] }}</td>
+                        <td>{{ row['home_team'] }}</td>
+                        <td>{{ row['客场_球队'] }}</td>
+                        <td>{{ row['prob_H'] }}</td>
+                        <td>{{ row['prob_D'] }}</td>
+                        <td>{{ row['prob_A'] }}</td>
+                        <td>{{ row['target_diff'] }}</td>
+                        <td>{{ row['home_adv'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <canvas id="probChart" width="600" height="250"></canvas>
+        </div>
+    </div>
+
+<script>
+const tableRows = document.querySelectorAll('#tableBody tr');
+const ctx = document.getElementById('probChart').getContext('2d');
+
+function drawChart(filteredRows) {
+    const labels = [];
+    const probH = [];
+    const probD = [];
+    const probA = [];
+
+    filteredRows.forEach(r => {
+        const cells = r.querySelectorAll('td');
+        labels.push(cells[2].innerText + ' vs ' + cells[3].innerText);
+        probH.push(parseFloat(cells[4].innerText));
+        probD.push(parseFloat(cells[5].innerText));
+        probA.push(parseFloat(cells[6].innerText));
+    });
+
+    if(window.myChart) window.myChart.destroy();
+
+    window.myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {label: '主胜概率', data: probH, backgroundColor: 'rgba(75, 192, 192, 0.7)'},
+                {label: '平局概率', data: probD, backgroundColor: 'rgba(255, 206, 86, 0.7)'},
+                {label: '客胜概率', data: probA, backgroundColor: 'rgba(255, 99, 132, 0.7)'}
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {y: {beginAtZero: true}}
+        }
+    });
+}
+
+// 初始图表
+drawChart(Array.from(tableRows));
+
+// 筛选
+document.getElementById('leagueFilter').addEventListener('change', function() {
+    const val = this.value;
+    const filtered = [];
+    tableRows.forEach(r => {
+        r.style.display = 'none';
+        if(val === 'all' || r.cells[1].innerText === val) {
+            r.style.display = '';
+            filtered.push(r);
+        }
+    });
+    drawChart(filtered);
+});
+</script>
+</body>
+</html>

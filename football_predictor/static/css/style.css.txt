@@ -1,0 +1,8 @@
+body { font-family: Arial, sans-serif; margin: 20px; }
+.container { display: flex; }
+.sidebar { width: 200px; margin-right: 20px; }
+.main { flex: 1; }
+table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+table, th, td { border: 1px solid #ccc; }
+th, td { padding: 8px; text-align: center; }
+th { background: #f4f4f4; }
